@@ -1,0 +1,41 @@
+import urllib
+import os
+import sys
+opener = urllib.FancyURLopener({})
+PDFS    = "e:/bonus/pdfs/"
+MAINURL = "https://plants.usda.gov/java/factSheet"
+PREFIX  = "https://plants.usda.gov"
+
+def downloadPDFS(nameOfTheFile, url):
+    try:
+        print("Downloading: ", nameOfTheFile  +"(from: "+ url +")")
+        urllib.urlretrieve(url, nameOfTheFile)
+    except:
+        print("The file", nameOfTheFile, "(", url, ")",
+                "was not able to be downloaded")
+def getPDFName(link):
+    res = PDFS
+    partsOfLink = link.split("/")
+    return res + partsOfLink[-1]
+def main():
+    try:
+        os.makedirs(PDFS)
+    except:
+        pass
+    try:
+        mainresponse = str(opener.open(MAINURL).read())
+    except:
+        print(sys.exc_info(), "\nCould not get the Main responce, retrying")
+        main()
+    links = mainresponse.split(".pdf")
+
+    pdfs = []
+    print("got:", len(links), "to download")
+    for pdf in links:
+        tmp = ""
+        tmpLinks = pdf.split("\"")
+        tmp = PREFIX + tmpLinks[-1] + ".pdf"
+        pdfs.append(tmp)
+        downloadPDFS(getPDFName(tmp), tmp)
+if __name__=="__main__":
+    main()
