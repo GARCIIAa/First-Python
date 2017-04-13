@@ -1,0 +1,64 @@
+def writeToFileBasic(Labbr, Lsym, Lcmn):
+    fp = open('./basics/basicInfo.txt','w')
+    l = len(Lsym)
+    for i in range(0, l):
+        fp.write(Labbr[i] + ',' + Lsym[i] + ',' + Lcmn[i] + '\n')
+    fp.flush()
+    fp.close()
+
+def writeToFileProfile(Labbr):
+    fp = open('./basics/profile.csv','w')  #truncate
+    fp.close()
+    extractProfile.writeProfileLabelToFile()
+    for lb in Labbr:
+        try:
+            addr = 'https://plants.usda.gov/core/profile?symbol=' + lb
+            content = urllib.urlopen(addr).read()
+            extractProfile.getProfile(content)
+        except Exception as e:
+            print('profile_label ' + lb + ': ' + e.message)
+
+def writeToFileCharacteristics(Labbr):
+    fp = open('./basics/character.csv', 'w')
+    fp.close()
+    l = len(Labbr)
+    for i in range(0, l):
+        try:
+            addr = 'https://plants.usda.gov/java/charProfile?symbol=' + Labbr[i]
+            content = urllib.urlopen(addr).read()
+            if i == 0:
+                extractCharacter.writeColumnNamesToFile(content)
+            extractCharacter.writeCharacteristicToFile(Labbr[i],extractCharacter.getColumnNames(content), content)
+        except Exception as e:
+            print('character_label ' + Labbr[i] + ': ' + e.message)
+            
+def main():
+    request = webdriver.Chrome('/Users/apple/ChromeApp/chromedriver')
+    request.get('https://plants.usda.gov/java/factSheet')
+    str = request.page_source.encode('utf-8')
+    
+    pstart = source.find('Fact Sheets and Plant Guides',0)
+    pattern = '<tr class=\"rowon\">'
+    pattern2end = '</th>'
+    pend = source.find('</tbody>',source.find(pattern))
+    p = pstart - 1
+    LSym = []
+    LCmn = []
+    Labbr = []
+    while p < pend:
+        p = source.find(pattern, p + 1)
+        if p == -1:
+            break
+        p2end = source.find(pattern2end, p)
+        p2start = source.find('>', p + len(pattern))
+        if p2end <= p2start:
+            continue
+        psym1 = source.find('<em>', p2end)
+        psym2 = source.find('<em>', psym1 + 1)
+        pCmn = source.find('<td>', psym2)
+        LSym.append(source[psym1 + len('<em>'): source.find('</em>', psym1)] + ' ' + source[psym2 + len('<em>'): source.find('</em>', psym2)])
+        LCmn.append(source[pCmn + len('<td>'): source.find('</td>', pCmn)])
+        Labbr.append(source[p2start + 1: p2end])
+    writeToFileBasic(Labbr, Lsym, Lcmn)
+    writeToFileProfile(Labbr)
+    writeToFileCharacteristics(Labbr)
