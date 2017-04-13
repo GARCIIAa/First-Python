@@ -2,7 +2,7 @@ import re
 import codecs
 
 
-def getLebels(fileName):
+def getLabels(fileName):
     labels = []
     str = ''
     ctl = 0
@@ -12,6 +12,7 @@ def getLebels(fileName):
     fin = codecs.open(fileName, 'r')
 
     for line in fin:
+        ctl = 0
         if len(font_pattern.findall(line)) != 0 and len(size_pattern.findall(line)) != 0 and len(
                 content_pattern.findall(line)):
             ctl = 1
@@ -28,6 +29,6 @@ def getLebels(fileName):
     for i in range(0,len(labels)):
       if  'a'<= labels[i][0] <= 'z':
           labels[i-1] =labels[i-1]+' '+labels[i]
-      labels = [item for item in labels if 'A' <= item[0] <= 'Z']
+    labels = [item for item in labels if 'A' <= item[0] <= 'Z']
 
     return labels
