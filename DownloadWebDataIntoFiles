@@ -1,3 +1,9 @@
+from selenium import webdriver
+import urllib
+import os
+import extractProfile
+import extractCharacter
+
 def writeToFileBasic(Labbr, Lsym, Lcmn):
     fp = open('./basics/basicInfo.txt','w')
     l = len(Lsym)
