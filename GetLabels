@@ -1,0 +1,33 @@
+import re
+import codecs
+
+
+def getLebels(fileName):
+    labelsList = []
+    label = ''
+    ctl = 0
+    font_pattern = re.compile(r'font="(.+?)"')
+    size_pattern = re.compile(r'size="(.+?)"')
+    content_pattern = re.compile(r'>(.)</text>', re.M)
+    fin = codecs.open(fileName, 'r')
+    
+    for line in fin:
+        if len(font_pattern.findall(line)) != 0 and len(size_pattern.findall(line)) != 0 and len(
+                content_pattern.findall(line)):
+            ctl = 1
+
+        if ctl == 1 and font_pattern.findall(line)[0] in ('TimesNewRomanPS-BoldMT', 'TimesNewRoman,Bold') and 13.0 <= float(size_pattern.findall(line)[0]) <= 14.0:
+            label += content_pattern.findall(line)[0]
+        else:
+            label = label.strip()
+            if len(label) > 1 :
+                if 'a' <= label[1] <= 'z':
+                    labelsList.append(label)
+            label = ''
+
+    for i in range(0,len(labelsList)):
+      if  'a'<= labelsList[i][0] <= 'z':
+           labelsList[i-1] =labelsList[i-1]+' '+labelsList[i]
+    labelsList = [item for item in labelsList if 'A' <= item[0] <= 'Z']
+
+    return labelsList
