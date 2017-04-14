@@ -7,11 +7,11 @@ class dataAdmin:
     def __init__(self, connection):
         self.connection = connection
         self.cursor = connection.cursor()
-        self.cursor.execute("CREATE DATABASE IF NOT EXISTS test;")
+        #self.cursor.execute("CREATE DATABASE IF NOT EXISTS test;")
         self.cursor.execute("USE test;")
         self.cursor.execute("DROP TABLE IF EXISTS usdaplant;")
         self.cursor.execute("CREATE TABLE IF NOT EXISTS usdaplant(`symbol` VARCHAR(12) PRIMARY KEY, `scientific_name` VARCHAR(40), `common_name` VARCHAR(40)) ENGINE=MyISAM;")
-        self.lf = open('./log.txt','w')
+
 
     def __delete__(self):
         self.cursor.close()
@@ -23,8 +23,6 @@ class dataAdmin:
         for info in infos:
             sql += '\'' + info + '\'' + ','
         sql = sql[:-1] + ');'
-        self.lf.write(sql + '\n')
-        self.lf.flush()
         self.cursor.execute(sql)
         self.connection.commit()
 
@@ -59,8 +57,18 @@ class dataAdmin:
 
     def findLabelPos(self, content, labels):
         labelpos = [0]
+        i = -1
         for lb in labels:
-            labelpos.append(content.find(lb, labelpos[-1]))
+            i = -1
+            while(labels[i] == -1):
+                i= i -1
+            if(len(lb)) >= 40:
+                str = lb[0:39]
+                labelpos.append(content.find(str, labelpos[i]))
+            else:
+                labelpos.append(content.find(lb, labelpos[i]))
+            if(labelpos[-1] == -1):
+                 labelpos[-1] = content.find(lb[0:5],labelpos[i])
         return labelpos[1:]
 
     def insertInfoFromTXT(self, labels, contentPDF, basicInfo, is_fs = True):
@@ -72,8 +80,6 @@ class dataAdmin:
         for i in range(0, len(labels)):
             sql += "%s=%s,"%('`' + labels[i] + '`', '\'' + stringlib.text_to_sql(contentPDF[labelpos[i] + len(labels[i]) - 1: labelpos[i + 1]]) + '\'')
         sql = sql[:-1] + "WHERE symbol='" + basicInfo[0: basicInfo.find(',')] + "';"
-        self.lf.write(sql + '\n')
-        self.lf.flush()
         try:
             sql = sql.replace('__', '_')
             self.cursor.execute(sql)
@@ -103,15 +109,13 @@ class dataAdmin:
         for i in range(0, l):
             sql += "%s=%s,"%('`' + labels[i] + '`', '\'' + row[i] + '\'')
         sql = sql[:-1] + ' WHERE symbol = ' + '\'' + row[0] + '\'' + ';'
-        self.lf.write(sql + '\n')
-        self.lf.flush()
         sql = sql.replace('__', '_')
         self.cursor.execute(sql)
         self.connection.commit()
 
 def main():
-    #conn = mysql.connector.connect(host='127.0.0.1',user='root',password='password',database='test')
-    mm = dataAdmin(mysql.connector.connect(user='root', password="youjiangping666", database='test', use_unicode=True))
+    #mm = dataAdmin(mysql.connector.connect(user='root',password='***',database='test'))
+    mm = dataAdmin(mysql.connector.connect(host = '172.31.34.145',user='15301164', password="***", database='db15301164', use_unicode=True))
     fp = open('./basics/basicInfo.txt', 'r')
     while True:
         line = fp.readline().strip()
