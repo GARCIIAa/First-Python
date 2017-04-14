@@ -1,0 +1,146 @@
+from extarctXML import getLabels
+from libraries import stringlib
+import os
+import mysql.connector
+
+class dataAdmin:
+    def __init__(self, connection):
+        self.connection = connection
+        self.cursor = connection.cursor()
+        self.cursor.execute("CREATE DATABASE IF NOT EXISTS test;")
+        self.cursor.execute("USE test;")
+        self.cursor.execute("DROP TABLE IF EXISTS usdaplant;")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS usdaplant(`symbol` VARCHAR(12) PRIMARY KEY, `scientific_name` VARCHAR(40), `common_name` VARCHAR(40)) ENGINE=MyISAM;")
+        self.lf = open('./log.txt','w')
+
+    def __delete__(self):
+        self.cursor.close()
+
+    def create3BasicTitles(self, basicInfo):
+        basicInfo = basicInfo.replace('\'', '\\\'')
+        infos = basicInfo.split(',')
+        sql = 'INSERT INTO usdaplant(`symbol`, `scientific_name`, `common_name`) VALUES('
+        for info in infos:
+            sql += '\'' + info + '\'' + ','
+        sql = sql[:-1] + ');'
+        self.lf.write(sql + '\n')
+        self.lf.flush()
+        self.cursor.execute(sql)
+        self.connection.commit()
+
+    def insertDataFromPDF(self, line):
+        sym = line[0: line.find(',')]
+        fs = './docs/fs_' + sym + '.pdf'
+        pg = './docs/pg_' + sym + '.pdf'
+        if os.path.exists(fs):
+            self.getLabelsFromXML('./xmls/fs_' + sym + '.xml', './texts/fs_' + sym + '.txt', line)
+        if os.path.exists(pg):
+            self.getLabelsFromXML('./xmls/pg_' + sym + '.xml', './texts/pg_' + sym + '.txt', line)
+
+    def getLabelsFromXML(self, fileXML, fileTXT, basicInfo):
+        fpt = open(fileTXT, 'r')
+        labels = getLabels(fileXML)
+        content = fpt.read()
+        self.createPDFTitles(labels, fileTXT.find('fs_') != -1)
+        self.insertInfoFromTXT(labels, content, basicInfo, fileTXT.find('fs_') != -1)
+        fpt.close()
+
+    def createPDFTitles(self, labels, is_fs = True):
+        prefix = 'fs_' if is_fs else 'pg_'
+        for lb in labels:
+            try:
+                sql = "ALTER TABLE usdaplant ADD COLUMN %s TEXT;"%('`' + prefix + stringlib.textToIdentifier(lb) + '`')
+                sql = sql.replace('__', '_')
+                self.cursor.execute(sql)
+                self.connection.commit()
+            except Exception as e:
+                print 'repr(e):\t', repr(e)
+                pass
+
+    def findLabelPos(self, content, labels):
+        labelpos = [0]
+        for lb in labels:
+            labelpos.append(content.find(lb, labelpos[-1]))
+        return labelpos[1:]
+
+    def insertInfoFromTXT(self, labels, contentPDF, basicInfo, is_fs = True):
+        labelpos = self.findLabelPos(contentPDF, labels)
+        labelpos.append(len(contentPDF))
+        prefix = 'fs_' if is_fs else 'pg_'
+        labels = [stringlib.textToIdentifier(prefix + lb) for lb in labels]
+        sql = "UPDATE usdaplant SET "
+        for i in range(0, len(labels)):
+            sql += "%s=%s,"%('`' + labels[i] + '`', '\'' + stringlib.text_to_sql(contentPDF[labelpos[i] + len(labels[i]) - 1: labelpos[i + 1]]) + '\'')
+        sql = sql[:-1] + "WHERE symbol='" + basicInfo[0: basicInfo.find(',')] + "';"
+        self.lf.write(sql + '\n')
+        self.lf.flush()
+        try:
+            sql = sql.replace('__', '_')
+            self.cursor.execute(sql)
+            self.connection.commit()
+        except Exception as e:
+            pass
+
+    def createOtherTitle(self, labels):
+        for lb in labels:
+            try:
+                sql = "ALTER TABLE usdaplant ADD COLUMN %s TEXT;"%('`' + stringlib.textToIdentifier(lb) + '`')
+                sql = sql.replace('__', '_')
+                self.cursor.execute(sql)
+                self.connection.commit()
+            except Exception as e:
+                pass
+
+    def insertOtherData(self, line, labels):
+        row = line.split(',')
+        row = [stringlib.text_to_sql(ele) for ele in row]
+        labels = [stringlib.textToIdentifier(ele.strip().strip(':')) for ele in labels]
+        sql = 'UPDATE usdaplant SET '
+        l = len(labels)
+        lrow = len(row)
+        if l != lrow:
+            return
+        for i in range(0, l):
+            sql += "%s=%s,"%('`' + labels[i] + '`', '\'' + row[i] + '\'')
+        sql = sql[:-1] + ' WHERE symbol = ' + '\'' + row[0] + '\'' + ';'
+        self.lf.write(sql + '\n')
+        self.lf.flush()
+        sql = sql.replace('__', '_')
+        self.cursor.execute(sql)
+        self.connection.commit()
+
+def main():
+    #conn = mysql.connector.connect(host='127.0.0.1',user='root',password='password',database='test')
+    mm = dataAdmin(mysql.connector.connect(user='root', password="youjiangping666", database='test', use_unicode=True))
+    fp = open('./basics/basicInfo.txt', 'r')
+    while True:
+        line = fp.readline().strip()
+        if not line:
+            break
+        mm.create3BasicTitles(line)
+        mm.insertDataFromPDF(line)
+    fp.close()
+
+    fp = open('./basics/profile.csv','r')
+    labels = fp.readline().strip().split(',')
+    mm.createOtherTitle(labels)
+    while True:
+        line = fp.readline().strip()
+        if not line:
+            break
+        mm.insertOtherData(line, labels)
+    fp.close()
+
+    fp = open('./basics/character.csv', 'r')
+    labels = ['symbol']
+    labels += fp.readline().strip().split(',')
+    mm.createOtherTitle(labels)
+    while True:
+        line = fp.readline().strip()
+        if not line:
+            break
+        mm.insertOtherData(line, labels)
+    fp.close()
+
+if __name__=="__main__":
+    main()
