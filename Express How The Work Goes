@@ -1,0 +1,8 @@
+First, I download all the PDFS from the website. Codes are in the PDFDownloads.
+Secondly, I convert PDFS to XML(to get labels) and TXT(to get contents) by using the pdf2txt.py from PDFMiner. Codes are in the PDF2TXT&XML.
+Thirdly, I get other data such as characs from the webs. Codes are in the DownloadWebDataIntoFiles.
+Fourth, I get labels from the XML files. Codes are in the GetLabels.
+Finally, I use the labels from XML to get contents from the TXT files, add columns and insert the data into the table. I also add columns and insert the data from the files of web data(chracs). Codes are in the getData&Insert2DB.
+Through the whole project, the table is dynamically created and modified.
+
+This is my first Python project, and I really learn a lot. THX for teacher Li that gives us such a practical assignment. 
